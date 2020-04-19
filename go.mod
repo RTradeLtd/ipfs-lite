@@ -1,4 +1,4 @@
-module github.com/hsanjuan/ipfs-lite
+module github.com/RTradeLtd/ipfs-lite
 
 go 1.14
 

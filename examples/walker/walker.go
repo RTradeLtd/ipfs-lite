@@ -7,8 +7,8 @@ import (
 	sdkc "github.com/RTradeLtd/go-temporalx-sdk/client"
 	"go.uber.org/zap"
 
+	ipfslite "github.com/RTradeLtd/ipfs-lite"
 	"github.com/awalterschulze/gographviz"
-	ipfslite "github.com/hsanjuan/ipfs-lite"
 	"github.com/ipfs/go-cid"
 	format "github.com/ipfs/go-ipld-format"
 	"github.com/ipfs/go-log/v2"

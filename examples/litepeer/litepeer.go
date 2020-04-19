@@ -10,7 +10,7 @@ import (
 
 	sdkc "github.com/RTradeLtd/go-temporalx-sdk/client"
 
-	ipfslite "github.com/hsanjuan/ipfs-lite"
+	ipfslite "github.com/RTradeLtd/ipfs-lite"
 	"github.com/ipfs/go-cid"
 	crypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/multiformats/go-multiaddr"
