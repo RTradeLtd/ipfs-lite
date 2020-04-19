@@ -3,6 +3,7 @@ package ipfslite
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"io"
 	"io/ioutil"
 	"testing"
@@ -10,16 +11,16 @@ import (
 	datastore "github.com/ipfs/go-datastore"
 	dssync "github.com/ipfs/go-datastore/sync"
 	cbor "github.com/ipfs/go-ipld-cbor"
-	crypto "github.com/libp2p/go-libp2p-crypto"
-	peerstore "github.com/libp2p/go-libp2p-peerstore"
+	crypto "github.com/libp2p/go-libp2p-core/crypto"
+	peer "github.com/libp2p/go-libp2p-core/peer"
 	multiaddr "github.com/multiformats/go-multiaddr"
 	multihash "github.com/multiformats/go-multihash"
 )
 
-var secret = []byte("2cc2c79ea52c9cc85dfd3061961dd8c4230cce0b09f182a0822c1536bf1d5f21")
+var secret = "2cc2c79ea52c9cc85dfd3061961dd8c4230cce0b09f182a0822c1536bf1d5f21"
 
 func setupPeers(t *testing.T) (p1, p2 *Peer, closer func(t *testing.T)) {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 
 	ds1 := dssync.MutexWrap(datastore.NewMapDatastore())
 	ds2 := dssync.MutexWrap(datastore.NewMapDatastore())
@@ -32,18 +33,25 @@ func setupPeers(t *testing.T) (p1, p2 *Peer, closer func(t *testing.T)) {
 		t.Fatal(err)
 	}
 
+	psk, err := hex.DecodeString(secret)
+	if err != nil {
+		t.Fatal(t)
+	}
+
 	listen, _ := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/0")
 	h1, dht1, err := SetupLibp2p(
 		ctx,
 		priv1,
-		secret,
+		psk,
 		[]multiaddr.Multiaddr{listen},
+		nil,
+		Libp2pOptionsExtra...,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	pinfo1 := peerstore.PeerInfo{
+	pinfo1 := peer.AddrInfo{
 		ID:    h1.ID(),
 		Addrs: h1.Addrs(),
 	}
@@ -51,19 +59,22 @@ func setupPeers(t *testing.T) (p1, p2 *Peer, closer func(t *testing.T)) {
 	h2, dht2, err := SetupLibp2p(
 		ctx,
 		priv2,
-		secret,
+		psk,
 		[]multiaddr.Multiaddr{listen},
+		nil,
+		Libp2pOptionsExtra...,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	pinfo2 := peerstore.PeerInfo{
+	pinfo2 := peer.AddrInfo{
 		ID:    h2.ID(),
 		Addrs: h2.Addrs(),
 	}
 
 	closer = func(t *testing.T) {
+		cancel()
 		for _, cl := range []io.Closer{dht1, dht2, h1, h2} {
 			err := cl.Close()
 			if err != nil {
@@ -82,8 +93,8 @@ func setupPeers(t *testing.T) (p1, p2 *Peer, closer func(t *testing.T)) {
 		t.Fatal(err)
 	}
 
-	p1.Bootstrap([]peerstore.PeerInfo{pinfo2})
-	p2.Bootstrap([]peerstore.PeerInfo{pinfo1})
+	p1.Bootstrap([]peer.AddrInfo{pinfo2})
+	p2.Bootstrap([]peer.AddrInfo{pinfo1})
 
 	return
 }
