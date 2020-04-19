@@ -6,8 +6,10 @@ import (
 	"encoding/hex"
 	"io"
 	"io/ioutil"
+	"os"
 	"testing"
 
+	sdkc "github.com/RTradeLtd/go-temporalx-sdk/client"
 	datastore "github.com/ipfs/go-datastore"
 	dssync "github.com/ipfs/go-datastore/sync"
 	cbor "github.com/ipfs/go-ipld-cbor"
@@ -15,6 +17,7 @@ import (
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	multiaddr "github.com/multiformats/go-multiaddr"
 	multihash "github.com/multiformats/go-multihash"
+	"go.uber.org/zap/zaptest"
 )
 
 var secret = "2cc2c79ea52c9cc85dfd3061961dd8c4230cce0b09f182a0822c1536bf1d5f21"
@@ -82,12 +85,21 @@ func setupPeers(t *testing.T) (p1, p2 *Peer, closer func(t *testing.T)) {
 			}
 		}
 	}
-	p1, err = New(ctx, ds1, h1, dht1, nil)
+	client, err := sdkc.NewClient(sdkc.Opts{
+		ListenAddress: func() string {
+			if os.Getenv("TEST_XAPI") == "" {
+				return "xapi.temporal.cloud:9090"
+			}
+			return os.Getenv("TEST_XAPI")
+		}(),
+		Insecure: true,
+	})
+	p1, err = New(ctx, zaptest.NewLogger(t), ds1, h1, dht1, nil, client)
 	if err != nil {
 		closer(t)
 		t.Fatal(err)
 	}
-	p2, err = New(ctx, ds2, h2, dht2, nil)
+	p2, err = New(ctx, zaptest.NewLogger(t), ds2, h2, dht2, nil, client)
 	if err != nil {
 		closer(t)
 		t.Fatal(err)

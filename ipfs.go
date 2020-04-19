@@ -11,12 +11,12 @@ import (
 	"sync"
 	"time"
 
+	blockstore "github.com/RTradeLtd/go-ipfs-blockstore/v2"
 	"github.com/ipfs/go-bitswap"
 	"github.com/ipfs/go-bitswap/network"
 	blockservice "github.com/ipfs/go-blockservice"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
-	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	chunker "github.com/ipfs/go-ipfs-chunker"
 	offline "github.com/ipfs/go-ipfs-exchange-offline"
 	provider "github.com/ipfs/go-ipfs-provider"
@@ -34,6 +34,10 @@ import (
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	routing "github.com/libp2p/go-libp2p-core/routing"
 	multihash "github.com/multiformats/go-multihash"
+	"go.uber.org/zap"
+
+	xpb "github.com/RTradeLtd/TxPB/v3/go"
+	sdkc "github.com/RTradeLtd/go-temporalx-sdk/client"
 )
 
 func init() {
@@ -77,6 +81,9 @@ type Peer struct {
 	bstore          blockstore.Blockstore
 	bserv           blockservice.BlockService
 	reprovider      provider.System
+
+	xclient *sdkc.Client
+	logger  *zap.Logger
 }
 
 // New creates an IPFS-Lite Peer. It uses the given datastore, libp2p Host and
@@ -85,10 +92,12 @@ type Peer struct {
 // implements the ipld.DAGService interface.
 func New(
 	ctx context.Context,
+	logger *zap.Logger,
 	store datastore.Batching,
 	host host.Host,
 	dht routing.Routing,
 	cfg *Config,
+	client *sdkc.Client,
 ) (*Peer, error) {
 
 	if cfg == nil {
@@ -98,11 +107,13 @@ func New(
 	cfg.setDefaults()
 
 	p := &Peer{
-		ctx:   ctx,
-		cfg:   cfg,
-		host:  host,
-		dht:   dht,
-		store: store,
+		ctx:     ctx,
+		cfg:     cfg,
+		host:    host,
+		dht:     dht,
+		store:   store,
+		logger:  logger,
+		xclient: client,
 	}
 
 	err := p.setupBlockstore()
@@ -130,9 +141,9 @@ func New(
 }
 
 func (p *Peer) setupBlockstore() error {
-	bs := blockstore.NewBlockstore(p.store)
-	bs = blockstore.NewIdStore(bs)
-	cachedbs, err := blockstore.CachedBlockstore(p.ctx, bs, blockstore.DefaultCacheOpts())
+	bs := blockstore.NewRemoteBlockstore(p.ctx, p.logger, p.xclient.NodeAPIClient)
+	idbs := blockstore.NewIdStore(bs)
+	cachedbs, err := blockstore.CachedBlockstore(p.ctx, idbs, blockstore.DefaultCacheOpts())
 	if err != nil {
 		return err
 	}
@@ -153,7 +164,7 @@ func (p *Peer) setupBlockService() error {
 }
 
 func (p *Peer) setupDAGService() error {
-	p.DAGService = merkledag.NewDAGService(p.bserv)
+	p.DAGService = xpb.NewDAGService(p.xclient.NodeAPIClient)
 	return nil
 }
 

@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	sdkc "github.com/RTradeLtd/go-temporalx-sdk/client"
+	"go.uber.org/zap"
+
 	"github.com/awalterschulze/gographviz"
 	ipfslite "github.com/hsanjuan/ipfs-lite"
 	"github.com/ipfs/go-cid"
@@ -50,8 +53,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	lite, err := ipfslite.New(ctx, ds, h, dht, nil)
+	client, err := sdkc.NewClient(sdkc.Opts{
+		ListenAddress: "xapi.temporal.cloud:9090",
+		Insecure:      true,
+	})
+	if err != nil {
+		panic(err)
+	}
+	lite, err := ipfslite.New(ctx, zap.NewNop(), ds, h, dht, nil, client)
 	if err != nil {
 		panic(err)
 	}

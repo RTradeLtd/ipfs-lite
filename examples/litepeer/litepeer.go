@@ -8,10 +8,13 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	sdkc "github.com/RTradeLtd/go-temporalx-sdk/client"
+
 	ipfslite "github.com/hsanjuan/ipfs-lite"
 	"github.com/ipfs/go-cid"
 	crypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/multiformats/go-multiaddr"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -46,7 +49,14 @@ func main() {
 		panic(err)
 	}
 
-	lite, err := ipfslite.New(ctx, ds, h, dht, nil)
+	client, err := sdkc.NewClient(sdkc.Opts{
+		ListenAddress: "xapi.temporal.cloud:9090",
+		Insecure:      true,
+	})
+	if err != nil {
+		panic(err)
+	}
+	lite, err := ipfslite.New(ctx, zap.NewNop(), ds, h, dht, nil, client)
 	if err != nil {
 		panic(err)
 	}
