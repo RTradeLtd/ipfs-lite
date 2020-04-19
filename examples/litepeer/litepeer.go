@@ -4,14 +4,13 @@ package main
 // hash from the IPFS network.
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 
 	sdkc "github.com/RTradeLtd/go-temporalx-sdk/client"
 
 	ipfslite "github.com/RTradeLtd/ipfs-lite"
-	"github.com/ipfs/go-cid"
 	crypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/multiformats/go-multiaddr"
 	"go.uber.org/zap"
@@ -61,18 +60,10 @@ func main() {
 		panic(err)
 	}
 
-	lite.Bootstrap(ipfslite.DefaultBootstrapPeers())
-
-	c, _ := cid.Decode("QmWATWQ7fVPP2EFGu71UkfnqhYXDYH566qy47CnJDgvs8u")
-	rsc, err := lite.GetFile(ctx, c)
+	//	lite.Bootstrap(ipfslite.DefaultBootstrapPeers())
+	nd, err := lite.AddFile(ctx, bytes.NewReader([]byte("helo world")), nil)
 	if err != nil {
 		panic(err)
 	}
-	defer rsc.Close()
-	content, err := ioutil.ReadAll(rsc)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(string(content))
+	fmt.Printf("%+v\n", nd)
 }
